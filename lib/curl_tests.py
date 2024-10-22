@@ -54,7 +54,6 @@ DEFAULTS = {
 # caldav.expect_content = "This is the WebDAV interface."
 # ==============================================
 
-
 def curl(
     base_url,
     path,
@@ -67,8 +66,8 @@ def curl(
     domain = base_url.replace("https://", "").replace("http://", "").split("/")[0]
 
     c = pycurl.Curl()  # curl
-    resolved_url = urljoin(base_url, path)
-    c.setopt(c.URL, resolved_url)  # https://domain.tld/foo/bar
+    resolved_url = f"{base_url}{path}" # https://domain.tld/foo/bar
+    c.setopt(c.URL, resolved_url)
     c.setopt(c.FOLLOWLOCATION, True)  # --location
     c.setopt(c.SSL_VERIFYPEER, False)  # --insecure
     c.setopt(
@@ -149,7 +148,7 @@ def test(
     retried = 0
     while code is None or code in {502, 503, 504}:
         time.sleep(retried * 5)
-        code, content, effective_url, _ = curl(
+        code, content, effective_url, resolved_url = curl(
             base_url, path, post=post, use_cookies=cookies
         )
         retried += 1
@@ -237,17 +236,17 @@ def test(
                 asset = asset.replace(f"{domain}/", "")
             if not asset.startswith("/"):
                 asset = urljoin(base + "/", asset)
-            asset_code, _, effective_asset_url, resolved_url = curl(
+            asset_code, _, effective_asset_url, resolved_asset_url = curl(
                 f"https://{domain}", asset, use_cookies=cookies
             )
             if asset_code != 200:
                 errors.append(
-                    f"Asset https://{resolved_url} (automatically derived from the page's html) answered with code {asset_code}, expected 200? Effective url: {effective_asset_url}"
+                    f"Asset https://{resolved_asset_url} (automatically derived from the page's html) answered with code {asset_code}, expected 200? Effective url: {effective_asset_url}"
                 )
-            assets.append((resolved_url, asset_code))
+            assets.append((resolved_asset_url, asset_code))
 
     return {
-        "url": f"{urljoin(base_url, path)}",
+        "url": resolved_url,
         "effective_url": effective_url,
         "code": code,
         "title": title,
